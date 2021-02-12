@@ -5,7 +5,7 @@
 Vagrant.configure("2") do |config|
   config.vm.box = "generic/ubuntu2004"
   config.vm.boot_timeout = 1200
-  config.vm.network "forwarded_port", guest: 3000, host: 8080
+  config.vm.network "forwarded_port", guest: 80, host: 8080
   config.vm.provider "virtualbox" do |vb|
     vb.memory = "2048"
   end
@@ -18,14 +18,15 @@ Vagrant.configure("2") do |config|
     sudo apt-get upgrade -y
     sudo apt-get install -y build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev wget
     sudo apt-get install -y libsqlite3-dev libbz2-dev liblzma-dev lzma
-    sudo apt-get install -y python3-virtualenv 
+    sudo apt-get install -y python3-virtualenv python3-dev
+    sudo apt-get install -y apache2 apache2-dev
 
     mkdir python3.6
     cd python3.6/
     wget https://www.python.org/ftp/python/3.6.12/Python-3.6.12.tgz
     tar -xf Python-3.6.12.tgz
     cd Python-3.6.12/
-    ./configure --enable-optimizations
+    ./configure --enable-optimizations --enable-shared LDFLAGS="-Wl,--rpath=/home/vagrant/python3.6/Python-3.6.12"
     sudo make install
     cd
 
@@ -41,5 +42,27 @@ Vagrant.configure("2") do |config|
     wget https://raw.githubusercontent.com/CanDIG/candig-ingest/master/candig/ingest/mock_data/clinical_metadata_tier2.json
     ingest candig-example-data/registry.db mock1 clinical_metadata_tier1.json
    
+    sudo mkdir /var/cache/apache2/python-egg-cache
+    sudo chown www-data:www-data /var/cache/apache2/python-egg-cache/
+    sudo mkdir /srv/candig
+    cd
+    
+    wget https://github.com/GrahamDumpleton/mod_wsgi/archive/4.6.2.tar.gz
+    tar xvfz 4.6.2.tar.gz 
+    cd mod_wsgi-4.6.2/
+    ./configure --with-python=/home/vagrant/candig-server-env/bin/python3
+    make
+    sudo make install
+
+    sudo apt-get install -y apache2 apache2-dev
+    sudo cp /home/vagrant/python3.6/Python-3.6.12/libpython3.6m.so.1.0 /usr/lib/
+    
+    cd
+    git clone https://github.com/CanDIG/infrastructure.git
+    sudo cp infrastructure/candig_v1/deploy/application.wsgi /srv/candig/application.wsgi
+    sudo cp infrastructure/candig_v1/deploy/000-default.conf /etc/apache2/sites-enabled/000-default.conf 
+    sudo cp infrastructure/candig_v1/deploy/config.py /srv/candig/config.py
+    sudo systemctl restart apache2
   SHELL
 end
+
