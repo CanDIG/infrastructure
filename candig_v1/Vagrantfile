@@ -4,6 +4,7 @@
 
 Vagrant.configure("2") do |config|
   config.vm.box = "generic/ubuntu2004"
+  config.vm.synced_folder "/Users/daisie/Documents/Work/Sandbox/candig/infrastructure/candig_v1", "/data"
   config.vm.boot_timeout = 1200
   config.vm.network "forwarded_port", guest: 80, host: 8080
   config.vm.provider "virtualbox" do |vb|
@@ -34,19 +35,6 @@ Vagrant.configure("2") do |config|
     source candig-server-env/bin/activate
     pip install wheel
     pip install --upgrade setuptools
-    pip install candig-server
-
-    pip install candig-ingest==1.3.1
-    mkdir candig-example-data
-    wget https://raw.githubusercontent.com/CanDIG/candig-ingest/master/candig/ingest/mock_data/clinical_metadata_tier1.json
-    wget https://raw.githubusercontent.com/CanDIG/candig-ingest/master/candig/ingest/mock_data/clinical_metadata_tier2.json
-    ingest candig-example-data/registry.db mock1 clinical_metadata_tier1.json
-   
-    sudo mkdir /var/cache/apache2/python-egg-cache
-    sudo chown www-data:www-data /var/cache/apache2/python-egg-cache/
-    sudo mkdir /srv/candig
-    cd
-    
     wget https://github.com/GrahamDumpleton/mod_wsgi/archive/4.6.2.tar.gz
     tar xvfz 4.6.2.tar.gz 
     cd mod_wsgi-4.6.2/
@@ -58,11 +46,24 @@ Vagrant.configure("2") do |config|
     sudo cp /home/vagrant/python3.6/Python-3.6.12/libpython3.6m.so.1.0 /usr/lib/
     
     cd
-    git clone https://github.com/CanDIG/infrastructure.git
-    sudo cp infrastructure/candig_v1/deploy/application.wsgi /srv/candig/application.wsgi
-    sudo cp infrastructure/candig_v1/deploy/000-default.conf /etc/apache2/sites-enabled/000-default.conf 
-    sudo cp infrastructure/candig_v1/deploy/config.py /srv/candig/config.py
+    sudo mkdir /srv/candig
+    sudo cp /data/deploy/application.wsgi /srv/candig/application.wsgi
+    sudo cp /data/deploy/000-default.conf /etc/apache2/sites-enabled/000-default.conf 
+    sudo cp /data/deploy/config.py /srv/candig/config.py
+
+    sudo mkdir /var/cache/apache2/python-egg-cache
+    sudo chown www-data:www-data /var/cache/apache2/python-egg-cache/
+    
+    git clone https://github.com/CanDIG/candig-server.git
+    cd candig-server
+    python -m pip install .
+    
+    cd 
+    pip install candig-ingest==1.3.1
+   
     sudo systemctl restart apache2
   SHELL
 end
 
+#     mkdir candig-example-data
+#     ingest candig-example-data/registry.db mock1 clinical_metadata_tier1.json
